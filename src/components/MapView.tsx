@@ -248,16 +248,22 @@ export const MapView: React.FC<MapViewProps> = ({
       latLngs.push(L.latLng(lat, lng));
     });
 
-    // Auto center map on all events of the day/filter
+    // Auto center map on all events of the day/filter, then dezoom by 1 level
     if (latLngs.length === 1) {
-      map.setView(latLngs[0], 12, { animate: true });
+      map.setView(latLngs[0], 11, { animate: true });
     } else if (latLngs.length > 1) {
       const bounds = L.latLngBounds(latLngs);
-      map.fitBounds(bounds, {
-        padding: [80, 80],
-        maxZoom: 13,
-        animate: true,
-      });
+      try {
+        const boundsZoom = map.getBoundsZoom(bounds, false, L.point(60, 60));
+        const targetZoom = Math.max(boundsZoom - 1, 6);
+        map.setView(bounds.getCenter(), targetZoom, { animate: true });
+      } catch {
+        map.fitBounds(bounds, {
+          padding: [80, 80],
+          maxZoom: 12,
+          animate: true,
+        });
+      }
     }
 
     setTimeout(updateScale, 300);

@@ -27,8 +27,8 @@ git init
 # 2. Ajouter tous les fichiers
 git add .
 
-# 3. Créer le commit initial (version 0.1)
-git commit -m "feat: version 0.1 calendrier FFBC on map"
+# 3. Créer le commit (version 0.2)
+git commit -m "feat: version 0.2 calendrier FFBC on map"
 
 # 4. Définir la branche principale
 git branch -M main

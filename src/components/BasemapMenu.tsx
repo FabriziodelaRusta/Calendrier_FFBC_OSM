@@ -38,7 +38,7 @@ export const BasemapMenu: React.FC<BasemapMenuProps> = ({
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="fixed bottom-[98px] right-[14px] z-[1002] select-none font-sans">
+    <div className="fixed bottom-[140px] sm:bottom-[126px] right-[14px] z-[1002] select-none font-sans">
       <div className="relative">
         {/* Floating single icon button right above the zoom controls */}
         <button

@@ -187,7 +187,7 @@ export default function App() {
 
       {/* 7. Exact requested footer in bottom center */}
       <div id="footer">
-        v<sub id="version">0.1</sub> — Fabrizio de la Rusta
+        v<sub id="version">0.2</sub> — Fabrizio de la Rusta
       </div>
     </div>
   );

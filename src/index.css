@@ -78,9 +78,15 @@ html, body, #root {
 
 /* Leaflet Zoom control position in bottomright */
 .leaflet-bottom.leaflet-right {
-  bottom: 20px !important;
+  bottom: 38px !important;
   right: 14px !important;
   z-index: 1000 !important;
+}
+
+@media (min-width: 640px) {
+  .leaflet-bottom.leaflet-right {
+    bottom: 28px !important;
+  }
 }
 
 .leaflet-control-zoom {

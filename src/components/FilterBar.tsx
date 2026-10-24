@@ -30,7 +30,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 }) => {
   return (
     <div
-      className="fixed left-2 top-[68px] sm:top-3 sm:left-1/2 sm:-translate-x-1/2 z-[1004] select-none"
+      className="fixed left-2 top-1/2 -translate-y-1/2 sm:top-3 sm:left-1/2 sm:-translate-x-1/2 sm:translate-y-0 z-[1004] select-none"
     >
       {/* Container: Vertical on smartphone (left side), Horizontal on desktop (top center) */}
       <div className="bg-white/95 backdrop-blur-md rounded-xl shadow-lg border border-slate-200/90 p-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-1 sm:gap-1.5 w-[140px] sm:w-auto">

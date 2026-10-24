@@ -1,13 +1,21 @@
 import React, { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Minimize2, Maximize2 } from 'lucide-react';
 import { FFBCRando } from '../types';
-import { formatDateShortFrench, formatDateFrench } from '../utils/formatters';
+import { formatDateShortFrench } from '../utils/formatters';
+import { matchDiscipline } from '../utils/dataLoader';
 
 interface CalendarWidgetProps {
   selectedDate: string; // YYYY-MM-DD
   onSelectDate: (date: string) => void;
   allEvents: FFBCRando[];
   todayDate: string; // YYYY-MM-DD
+}
+
+interface DateDisciplines {
+  count: number;
+  hasRoute: boolean;
+  hasGravel: boolean;
+  hasVtt: boolean;
 }
 
 const MONTH_NAMES = [
@@ -35,12 +43,22 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
   const viewYear = currentViewDate.getFullYear();
   const viewMonth = currentViewDate.getMonth();
 
-  // Map of date string -> count of events
-  const eventsByDate = useMemo(() => {
-    const map = new Map<string, number>();
+  // Map of date string -> disciplines summary
+  const disciplinesByDate = useMemo(() => {
+    const map = new Map<string, DateDisciplines>();
     for (const ev of allEvents) {
       if (ev.date) {
-        map.set(ev.date, (map.get(ev.date) || 0) + 1);
+        const current = map.get(ev.date) || {
+          count: 0,
+          hasRoute: false,
+          hasGravel: false,
+          hasVtt: false,
+        };
+        current.count += 1;
+        if (matchDiscipline(ev, 'ROUTE')) current.hasRoute = true;
+        if (matchDiscipline(ev, 'GRAVEL')) current.hasGravel = true;
+        if (matchDiscipline(ev, 'VTT')) current.hasVtt = true;
+        map.set(ev.date, current);
       }
     }
     return map;
@@ -48,21 +66,21 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
 
   // Find next upcoming date with events relative to selected date
   const nextDateWithEvent = useMemo(() => {
-    const datesWithEvents = Array.from(eventsByDate.keys()).sort();
+    const datesWithEvents = Array.from(disciplinesByDate.keys()).sort();
     return datesWithEvents.find(d => d > selectedDate) || datesWithEvents[0] || null;
-  }, [eventsByDate, selectedDate]);
+  }, [disciplinesByDate, selectedDate]);
 
   // Total events in current viewed month
   const eventsInViewMonth = useMemo(() => {
     let count = 0;
     const prefix = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`;
-    for (const [date, qty] of eventsByDate.entries()) {
+    for (const [date, info] of disciplinesByDate.entries()) {
       if (date.startsWith(prefix)) {
-        count += qty;
+        count += info.count;
       }
     }
     return count;
-  }, [eventsByDate, viewYear, viewMonth]);
+  }, [disciplinesByDate, viewYear, viewMonth]);
 
   // Navigation handlers
   const handlePrevMonth = () => {
@@ -92,8 +110,10 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
       dayNum: number;
       dateStr: string;
       isCurrentMonth: boolean;
-      eventCount: number;
+      disciplines: DateDisciplines;
     }> = [];
+
+    const emptyDisciplines: DateDisciplines = { count: 0, hasRoute: false, hasGravel: false, hasVtt: false };
 
     const prevMonthLastDay = new Date(viewYear, viewMonth, 0).getDate();
     for (let i = startDayOfWeek - 1; i >= 0; i--) {
@@ -104,7 +124,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
         dayNum: d,
         dateStr,
         isCurrentMonth: false,
-        eventCount: eventsByDate.get(dateStr) || 0,
+        disciplines: disciplinesByDate.get(dateStr) || emptyDisciplines,
       });
     }
 
@@ -114,7 +134,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
         dayNum: d,
         dateStr,
         isCurrentMonth: true,
-        eventCount: eventsByDate.get(dateStr) || 0,
+        disciplines: disciplinesByDate.get(dateStr) || emptyDisciplines,
       });
     }
 
@@ -126,14 +146,14 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
         dayNum: d,
         dateStr,
         isCurrentMonth: false,
-        eventCount: eventsByDate.get(dateStr) || 0,
+        disciplines: disciplinesByDate.get(dateStr) || emptyDisciplines,
       });
     }
 
     return cells;
-  }, [viewYear, viewMonth, eventsByDate]);
+  }, [viewYear, viewMonth, disciplinesByDate]);
 
-  const selectedCount = eventsByDate.get(selectedDate) || 0;
+  const selectedDisciplines = disciplinesByDate.get(selectedDate) || { count: 0, hasRoute: false, hasGravel: false, hasVtt: false };
 
   return (
     <div
@@ -184,7 +204,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
                 J : {formatDateShortFrench(selectedDate)}
               </span>
               <span className="text-blue-600 font-bold">
-                ({selectedCount})
+                ({selectedDisciplines.count})
               </span>
             </div>
             <span className="text-blue-600 font-medium text-[9px] ml-1 shrink-0">Ouvrir</span>
@@ -233,9 +253,9 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
               {calendarCells.map((cell) => {
                 const isSelected = cell.dateStr === selectedDate;
                 const isToday = cell.dateStr === todayDate;
-                const hasEvents = cell.eventCount > 0;
+                const hasEvents = cell.disciplines.count > 0;
 
-                let btnClass = 'relative flex flex-col items-center justify-center h-5 sm:h-7 rounded text-[9px] sm:text-[11px] font-medium transition-all cursor-pointer ';
+                let btnClass = 'relative flex flex-col items-center justify-start pt-0.5 h-6 sm:h-7 rounded text-[9px] sm:text-[11px] font-medium transition-all cursor-pointer ';
 
                 if (isSelected) {
                   btnClass += 'bg-blue-600 text-white font-bold shadow-sm scale-105 z-10';
@@ -263,15 +283,38 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
                       }
                     }}
                     className={btnClass}
-                    title={`${cell.dateStr}${hasEvents ? ` (${cell.eventCount} rando${cell.eventCount > 1 ? 's' : ''})` : ''}`}
+                    title={`${cell.dateStr}${hasEvents ? ` (${cell.disciplines.count} rando${cell.disciplines.count > 1 ? 's' : ''})` : ''}`}
                   >
                     <span>{cell.dayNum}</span>
+
+                    {/* Colored dots for route (blue), gravel (amber), vtt (green) */}
                     {hasEvents && (
-                      <span
-                        className={`absolute bottom-0 w-1 h-1 rounded-full ${
-                          isSelected ? 'bg-amber-300' : 'bg-blue-600'
-                        }`}
-                      />
+                      <div className="absolute bottom-0.5 flex items-center justify-center gap-[1.5px] max-w-full overflow-hidden px-0.5">
+                        {cell.disciplines.hasRoute && (
+                          <span
+                            className={`w-1 h-1 rounded-full ${
+                              isSelected ? 'bg-sky-200' : 'bg-blue-600'
+                            }`}
+                            title="Route"
+                          />
+                        )}
+                        {cell.disciplines.hasGravel && (
+                          <span
+                            className={`w-1 h-1 rounded-full ${
+                              isSelected ? 'bg-amber-300' : 'bg-amber-500'
+                            }`}
+                            title="Gravel"
+                          />
+                        )}
+                        {cell.disciplines.hasVtt && (
+                          <span
+                            className={`w-1 h-1 rounded-full ${
+                              isSelected ? 'bg-emerald-300' : 'bg-emerald-600'
+                            }`}
+                            title="VTT"
+                          />
+                        )}
+                      </div>
                     )}
                   </button>
                 );
@@ -286,16 +329,16 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
                 </div>
                 <div
                   className={`font-bold px-1 py-0.2 rounded text-[9px] shrink-0 ${
-                    selectedCount > 0
+                    selectedDisciplines.count > 0
                       ? 'bg-blue-100 text-blue-800'
                       : 'bg-slate-100 text-slate-500'
                   }`}
                 >
-                  {selectedCount} rando{selectedCount > 1 ? 's' : ''}
+                  {selectedDisciplines.count} rando{selectedDisciplines.count > 1 ? 's' : ''}
                 </div>
               </div>
 
-              {selectedCount === 0 && nextDateWithEvent && (
+              {selectedDisciplines.count === 0 && nextDateWithEvent && (
                 <div className="mt-1">
                   <button
                     onClick={() => {
