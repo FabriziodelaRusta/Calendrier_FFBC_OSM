@@ -83,10 +83,15 @@ export function resolveCoordinatesSync(rando: FFBCRando): LocationCoord | null {
     return POSTAL_CODE_COORDINATES[rando.code_postal];
   }
 
-  // 5. Postal code from address string if 4 digits
-  const cpMatch = addressQuery.match(/\b([1-9]\d{3})\b/);
+  // 5. Postal code from address string (4 or 5 digits)
+  const cpMatch = addressQuery.match(/\b(\d{4,5})\b/);
   if (cpMatch && POSTAL_CODE_COORDINATES[cpMatch[1]]) {
     return POSTAL_CODE_COORDINATES[cpMatch[1]];
+  }
+
+  // 6. Check if address or locality contains Vaison
+  if (addressQuery.toLowerCase().includes('vaison')) {
+    return { lat: 44.2408, lng: 5.0747, name: 'Vaison-la-Romaine (France)' };
   }
 
   return null;

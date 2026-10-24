@@ -2,5 +2,7 @@
   "name": "calendrier FFBC on map",
   "description": "Carte interactive OpenStreetMap des randonnées FFBC avec calendrier journalier, filtres Route, Gravel, VTT et itinéraires.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

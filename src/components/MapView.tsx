@@ -28,50 +28,42 @@ const BASEMAP_TILES: Record<BasemapType, { url: string; attribution: string; max
     attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
     maxZoom: 18,
   },
-  carto: {
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-    attribution: '&copy; CartoDB &amp; OpenStreetMap contributors',
-    maxZoom: 19,
-  },
 };
 
+// Smaller, more compact pin icon (22px x 28px)
 function createPinIcon(rando: FFBCRando, isSelected: boolean): L.DivIcon {
   const parcoursTypes = (rando.parcours || []).map(p => (p.type || '').toUpperCase());
   const nameUpper = (rando.nom || '').toUpperCase();
 
   const isVtt = parcoursTypes.some(t => t.includes('VTT')) || nameUpper.includes('VTT');
   const isGravel = parcoursTypes.some(t => t.includes('GRAVEL')) || nameUpper.includes('GRAVEL');
-  const isRoute = parcoursTypes.some(t => t.includes('ROUTE') || t.includes('CYCLO') || t.includes('EASY')) || (!isVtt && !isGravel);
 
   let pinColor = '#2563EB'; // Blue Route
-  let typeLabel = 'ROUTE';
+  let letter = 'R';
 
   if (isVtt && isGravel) {
     pinColor = '#7C3AED'; // Mixed
-    typeLabel = 'MIXTE';
+    letter = 'M';
   } else if (isVtt) {
     pinColor = '#059669'; // Green VTT
-    typeLabel = 'VTT';
+    letter = 'V';
   } else if (isGravel) {
     pinColor = '#D97706'; // Amber Gravel
-    typeLabel = 'GRAVEL';
+    letter = 'G';
   }
 
-  const pulseEffect = isSelected ? 'animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;' : '';
+  const pulseBorder = isSelected ? 'filter: drop-shadow(0 0 6px rgba(37,99,235,0.8)); transform: scale(1.15);' : '';
 
   const html = `
-    <div style="position: relative; width: 34px; height: 42px; cursor: pointer; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 3px 5px rgba(0,0,0,0.35)); transition: transform 0.15s ease;">
-      <svg viewBox="0 0 34 42" width="34" height="42" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M17 0C7.611 0 0 7.611 0 17C0 27.5 14.5 40.5 16.2 41.9C16.65 42.27 17.35 42.27 17.8 41.9C19.5 40.5 34 27.5 34 17C34 7.611 26.389 0 17 0Z" fill="${pinColor}"/>
-        <path d="M17 2C8.716 2 2 8.716 2 17C2 26 15 38 17 39.7C19 38 32 26 32 17C32 8.716 25.284 2 17 2Z" fill="${pinColor}" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.6"/>
-        <circle cx="17" cy="16" r="11" fill="#ffffff"/>
+    <div style="position: relative; width: 22px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.32)); transition: transform 0.15s ease; ${pulseBorder}">
+      <svg viewBox="0 0 22 28" width="22" height="28" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M11 0C4.925 0 0 4.925 0 11C0 18.5 9.5 26.8 10.4 27.7C10.7 28 11.3 28 11.6 27.7C12.5 26.8 22 18.5 22 11C22 4.925 17.075 0 11 0Z" fill="${pinColor}"/>
+        <path d="M11 1.5C5.753 1.5 1.5 5.753 1.5 11C1.5 17.5 10 24.8 11 25.8C12 24.8 20.5 17.5 20.5 11C20.5 5.753 16.247 1.5 11 1.5Z" stroke="#ffffff" stroke-width="1.2" stroke-opacity="0.8"/>
+        <circle cx="11" cy="10" r="6" fill="#ffffff"/>
       </svg>
-      <div style="position: absolute; top: 7px; left: 0; right: 0; display: flex; align-items: center; justify-content: center;">
-        <span style="font-size: 13px; line-height: 1; user-select: none;">🚴</span>
-      </div>
-      <div style="position: absolute; bottom: 13px; left: 0; right: 0; text-align: center;">
-        <span style="background: ${pinColor}; color: #ffffff; font-size: 8px; font-weight: 800; padding: 1px 3px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.04em;">
-          ${typeLabel}
+      <div style="position: absolute; top: 4px; left: 0; right: 0; display: flex; align-items: center; justify-content: center;">
+        <span style="font-size: 9px; font-weight: 900; color: ${pinColor}; line-height: 1; user-select: none; font-family: system-ui, sans-serif;">
+          ${letter}
         </span>
       </div>
     </div>
@@ -79,10 +71,10 @@ function createPinIcon(rando: FFBCRando, isSelected: boolean): L.DivIcon {
 
   return L.divIcon({
     html,
-    className: 'ffbc-marker-icon',
-    iconSize: [34, 42],
-    iconAnchor: [17, 42],
-    popupAnchor: [0, -38],
+    className: 'ffbc-marker-icon-small',
+    iconSize: [22, 28],
+    iconAnchor: [11, 28],
+    popupAnchor: [0, -26],
   });
 }
 
@@ -139,7 +131,7 @@ export const MapView: React.FC<MapViewProps> = ({
       scaleDiv.style.width = final.px + 'px';
       scaleValue.textContent = final.c >= 1000 ? Math.round(final.c / 1000) + ' km' : Math.round(final.c) + ' m';
     } catch {
-      // Ignore initial render calculations before map size settles
+      // Ignore initial render calculations before map settles
     }
   };
 
@@ -151,11 +143,11 @@ export const MapView: React.FC<MapViewProps> = ({
     const map = L.map(mapContainerRef.current, {
       center: [50.5039, 4.4699],
       zoom: 8,
-      zoomControl: false, // will place zoom in bottomleft explicitly
+      zoomControl: false, // will place zoom in bottomright explicitly
     });
 
-    // Add zoom control at bottom left
-    L.control.zoom({ position: 'bottomleft' }).addTo(map);
+    // Add zoom control at bottom right as requested
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
 
     // Initial tile layer
     const config = BASEMAP_TILES[basemap] || BASEMAP_TILES.osm;
@@ -235,7 +227,7 @@ export const MapView: React.FC<MapViewProps> = ({
       // Tooltip on hover
       marker.bindTooltip(generateTooltipContent(rando), {
         direction: 'top',
-        offset: [0, -32],
+        offset: [0, -24],
         opacity: 0.95,
         className: 'ffbc-leaflet-tooltip',
       });
@@ -286,7 +278,7 @@ export const MapView: React.FC<MapViewProps> = ({
       {/* Fullscreen Map container */}
       <div id="map" ref={mapContainerRef} className="w-full h-full z-0" />
 
-      {/* Custom Scale container placed at bottom left next to Leaflet zoom buttons */}
+      {/* Scale container at bottom left */}
       <div id="scaleContainer">
         <div id="customScale">
           <div className="black" />

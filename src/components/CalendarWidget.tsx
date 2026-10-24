@@ -141,8 +141,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
 
   return (
     <div
-      className="fixed top-3 right-3 z-[1005] select-none font-sans"
-      style={{ maxWidth: 'calc(100vw - 24px)' }}
+      className="relative select-none font-sans w-[290px]"
     >
       <div className="bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-slate-200/90 overflow-hidden w-[290px] transition-all duration-200">
         {/* Header Bar */}

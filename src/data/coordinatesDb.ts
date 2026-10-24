@@ -30,6 +30,8 @@ export const EVENT_COORDINATES: Record<string, LocationCoord> = {
   "9414": { lat: 49.68360, lng: 5.81670, name: "Arlon" },
   "9012": { lat: 50.74330, lng: 3.21890, name: "Mouscron" },
   "9024": { lat: 44.24080, lng: 5.07470, name: "Vaison-la-Romaine (France)" },
+  "9649": { lat: 44.24080, lng: 5.07470, name: "Vaison-la-Romaine (France)" },
+  "9908": { lat: 44.24080, lng: 5.07470, name: "Vaison-la-Romaine (France)" },
   "9014": { lat: 50.66810, lng: 3.61920, name: "Frasnes-lez-Buissenal" },
   "9250": { lat: 49.60530, lng: 5.48000, name: "Meix-devant-Virton" },
   "9016": { lat: 50.70220, lng: 3.37610, name: "Hérinnes" },

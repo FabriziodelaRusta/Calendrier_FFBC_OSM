@@ -79,6 +79,7 @@ export async function fetchFFBCData(): Promise<CalendarDataset> {
       id: String(item.id || Math.random().toString(36).substring(7)),
       nom: item.nom || 'Randonnée FFBC',
       date: item.date || '2026-10-24',
+      province: item.province && String(item.province).trim() !== '' ? String(item.province).trim() : 'Inconnu',
       code_postal: item.code_postal ? String(item.code_postal).trim() : null,
       localite: item.localite ? String(item.localite).trim() : null,
       lieu_depart: item.lieu_depart || null,

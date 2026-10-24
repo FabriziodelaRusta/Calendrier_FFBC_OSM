@@ -37,4 +37,4 @@ export interface FFBCRando {
 
 export type DisciplineFilter = 'ALL' | 'ROUTE' | 'GRAVEL' | 'VTT';
 
-export type BasemapType = 'osm' | 'cycle' | 'esri' | 'carto';
+export type BasemapType = 'osm' | 'cycle' | 'esri';
