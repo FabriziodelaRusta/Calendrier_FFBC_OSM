@@ -58,7 +58,6 @@ export default function App() {
       set.add(prov);
     }
     const list = Array.from(set);
-    // Put standard provinces in order, then 'Inconnu'
     return list.sort((a, b) => {
       if (a === 'Inconnu') return 1;
       if (b === 'Inconnu') return -1;
@@ -132,7 +131,7 @@ export default function App() {
 
   return (
     <div className="relative w-screen h-screen overflow-hidden select-none">
-      {/* 1. Header with RPA Club logo and title (top left) */}
+      {/* 1. Top Left: Header with RPA Club logo and title (max half screen on mobile) */}
       <HeaderBrand
         onRefresh={loadData}
         isLoading={isLoading}
@@ -141,7 +140,15 @@ export default function App() {
         totalEventsCount={allEvents.length}
       />
 
-      {/* 2. Filter buttons for Route, Gravel, VTT + Province dropdown + Reset (top center) */}
+      {/* 2. Top Right: Monthly calendar widget (max half screen on mobile) */}
+      <CalendarWidget
+        selectedDate={selectedDate}
+        onSelectDate={setSelectedDate}
+        allEvents={allEvents}
+        todayDate={todayDateStr}
+      />
+
+      {/* 3. Filters: Vertical on the left for smartphone, Horizontal top center for desktop */}
       <FilterBar
         currentFilter={disciplineFilter}
         onFilterChange={setDisciplineFilter}
@@ -153,24 +160,6 @@ export default function App() {
         onResetAll={handleResetAll}
       />
 
-      {/* 3. Right column: Monthly calendar widget + Basemap chooser directly beneath it */}
-      <div
-        className="fixed top-3 right-3 z-[1005] flex flex-col items-end gap-2"
-        style={{ maxWidth: 'calc(100vw - 24px)' }}
-      >
-        <CalendarWidget
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          allEvents={allEvents}
-          todayDate={todayDateStr}
-        />
-
-        <BasemapMenu
-          currentBasemap={basemap}
-          onBasemapChange={setBasemap}
-        />
-      </div>
-
       {/* 4. Fullscreen OpenStreetMap View with pins, bottom-left scale, and bottom-right zoom */}
       <MapView
         events={displayedEvents}
@@ -180,7 +169,13 @@ export default function App() {
         basemap={basemap}
       />
 
-      {/* 5. Slide-out list drawer for inspecting the day's events */}
+      {/* 5. Basemap switcher icon button: in bottom-right directly above the zoom buttons */}
+      <BasemapMenu
+        currentBasemap={basemap}
+        onBasemapChange={setBasemap}
+      />
+
+      {/* 6. Slide-out list drawer for inspecting the day's events */}
       <RandoListDrawer
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
@@ -190,7 +185,7 @@ export default function App() {
         onSelectRando={handleSelectRando}
       />
 
-      {/* 6. Exact requested footer in bottom center */}
+      {/* 7. Exact requested footer in bottom center */}
       <div id="footer">
         v<sub id="version">0.1</sub> — Fabrizio de la Rusta
       </div>
