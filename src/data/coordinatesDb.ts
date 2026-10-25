@@ -28,6 +28,7 @@ export const EVENT_COORDINATES: Record<string, LocationCoord> = {
   "9904": { lat: 50.26110, lng: 4.91220, name: "Dinant" },
   "9468": { lat: 50.48202, lng: 3.76383, name: "Hautrage Centre" },
   "9664": { lat: 50.47470, lng: 3.24330, name: "Orchies (France)" },
+  "8980": { lat: 50.47470, lng: 3.24330, name: "Orchies (France)" },
   "9010": { lat: 50.63580, lng: 3.38530, name: "Kain" },
   "9414": { lat: 49.68360, lng: 5.81670, name: "Arlon" },
   "9012": { lat: 50.74330, lng: 3.21890, name: "Mouscron" },

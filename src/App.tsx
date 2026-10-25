@@ -177,6 +177,7 @@ export default function App() {
         selectedRandoId={selectedRandoId}
         onSelectRando={handleSelectRando}
         basemap={basemap}
+        activeFilter={disciplineFilter}
       />
 
       {/* 5. Basemap switcher icon button: in bottom-right directly above the zoom buttons */}

@@ -93,24 +93,22 @@ export function resolveCoordinatesSync(rando: FFBCRando): Coordinates | null {
     return dynamicCache.get(cp)!;
   }
 
-  // 7. Check by locality name in Belgian database
-  if (rando.localite) {
-    const locClean = cleanAddressString(rando.localite).toUpperCase();
-    if (locClean.includes('VAISON')) {
-      return { lat: 44.2408, lng: 5.0747, name: 'Vaison-la-Romaine (France)' };
-    }
-    if (locClean.includes('CAVAILLON')) {
-      return { lat: 43.8378, lng: 5.0381, name: 'Cavaillon (France)' };
-    }
-    if (locClean.includes('ORCHIES')) {
-      return { lat: 50.4750, lng: 3.2430, name: 'Orchies (France)' };
-    }
-    if (locClean.includes('SEVILLE') || locClean.includes('SÉVILLE')) {
-      return { lat: 37.3891, lng: -5.9845, name: 'Séville (Espagne)' };
-    }
-    if (locClean.includes('MARRAKECH')) {
-      return { lat: 31.6295, lng: -7.9811, name: 'Marrakech (Maroc)' };
-    }
+  // 7. Check by locality name or full address text
+  const fullText = (addressQuery + ' ' + (rando.localite || '') + ' ' + (rando.nom || '')).toUpperCase();
+  if (fullText.includes('VAISON') || fullText.includes('84110')) {
+    return { lat: 44.2408, lng: 5.0747, name: 'Vaison-la-Romaine (France)' };
+  }
+  if (fullText.includes('CAVAILLON') || fullText.includes('84300')) {
+    return { lat: 43.8378, lng: 5.0381, name: 'Cavaillon (France)' };
+  }
+  if (fullText.includes('ORCHIES') || fullText.includes('59310')) {
+    return { lat: 50.4747, lng: 3.2433, name: 'Orchies (France)' };
+  }
+  if (fullText.includes('SEVILLE') || fullText.includes('SÉVILLE') || fullText.includes('41001')) {
+    return { lat: 37.3891, lng: -5.9845, name: 'Séville (Espagne)' };
+  }
+  if (fullText.includes('MARRAKECH') || fullText.includes('40000')) {
+    return { lat: 31.6295, lng: -7.9811, name: 'Marrakech (Maroc)' };
   }
 
   // 8. If special Diagonales/Traces without fix, fallback to center of Belgium

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
-import { FFBCRando, BasemapType } from '../types';
+import { FFBCRando, BasemapType, DisciplineFilter } from '../types';
 import { generatePopupContent, generateTooltipContent } from '../utils/popupGenerator';
 
 interface MapViewProps {
@@ -9,6 +9,7 @@ interface MapViewProps {
   selectedRandoId?: string | null;
   onSelectRando?: (rando: FFBCRando) => void;
   basemap: BasemapType;
+  activeFilter?: DisciplineFilter;
 }
 
 const BASEMAP_TILES: Record<BasemapType, { url: string; attribution: string; maxZoom: number }> = {
@@ -18,7 +19,6 @@ const BASEMAP_TILES: Record<BasemapType, { url: string; attribution: string; max
     maxZoom: 19,
   },
   cycle: {
-    // CyclOSM bicycle-oriented tiles
     url: 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
     attribution: '&copy; CyclOSM &amp; OpenStreetMap contributors',
     maxZoom: 18,
@@ -30,30 +30,74 @@ const BASEMAP_TILES: Record<BasemapType, { url: string; attribution: string; max
   },
 };
 
-// Smaller, more compact pin icon (22px x 28px)
-function createPinIcon(rando: FFBCRando, isSelected: boolean): L.DivIcon {
+// Compact pin icon with 100% synchronized colors:
+// Route: #2563EB (Bleu)
+// Gravel: #EA580C (Orange)
+// VTT: #16A34A (Vert)
+// Marche: #DC2626 (Rouge)
+function createPinIcon(
+  rando: FFBCRando,
+  isSelected: boolean,
+  activeFilter: DisciplineFilter = 'ALL'
+): L.DivIcon {
   const parcoursTypes = (rando.parcours || []).map(p => (p.type || '').toUpperCase());
   const nameUpper = (rando.nom || '').toUpperCase();
 
-  const isVtt = parcoursTypes.some(t => t.includes('VTT')) || nameUpper.includes('VTT');
+  const isVtt = parcoursTypes.some(t => t.includes('VTT')) || nameUpper.includes('VTT') || nameUpper.includes('BIKER');
   const isGravel = parcoursTypes.some(t => t.includes('GRAVEL')) || nameUpper.includes('GRAVEL');
   const isMarche = parcoursTypes.some(t => t.includes('MARCH') || t.includes('PEDESTRE')) || nameUpper.includes('MARCHE');
+  const isRoute = parcoursTypes.some(t => t.includes('ROUTE') || t.includes('CYCLO')) || nameUpper.includes('CYCLO') || nameUpper.includes('ROUTE');
 
-  let pinColor = '#2563EB'; // Route bleu
+  let pinColor = '#2563EB'; // Bleu Route default
   let letter = 'R';
 
-  if (isMarche && !isVtt && !isGravel) {
-    pinColor = '#DC2626'; // Marche rouge
-    letter = 'M';
-  } else if (isVtt && isGravel) {
-    pinColor = '#7C3AED'; // Mixed violet
-    letter = '★';
-  } else if (isVtt) {
-    pinColor = '#16A34A'; // VTT vert
+  // If a specific filter is currently active, align pin with that filter
+  if (activeFilter === 'VTT' && isVtt) {
+    pinColor = '#16A34A';
     letter = 'V';
-  } else if (isGravel) {
-    pinColor = '#EA580C'; // Gravel orange
+  } else if (activeFilter === 'GRAVEL' && isGravel) {
+    pinColor = '#EA580C';
     letter = 'G';
+  } else if (activeFilter === 'MARCHE' && isMarche) {
+    pinColor = '#DC2626';
+    letter = 'M';
+  } else if (activeFilter === 'ROUTE') {
+    pinColor = '#2563EB';
+    letter = 'R';
+  } else {
+    // When activeFilter is 'ALL', choose strictly among the 4 canonical colors
+    if (nameUpper.includes('VTT') || nameUpper.includes('BIKER')) {
+      pinColor = '#16A34A';
+      letter = 'V';
+    } else if (nameUpper.includes('GRAVEL')) {
+      pinColor = '#EA580C';
+      letter = 'G';
+    } else if (nameUpper.includes('MARCHE')) {
+      pinColor = '#DC2626';
+      letter = 'M';
+    } else if (isVtt && !isRoute && !isGravel) {
+      pinColor = '#16A34A';
+      letter = 'V';
+    } else if (isGravel && !isRoute && !isVtt) {
+      pinColor = '#EA580C';
+      letter = 'G';
+    } else if (isMarche && !isRoute && !isVtt && !isGravel) {
+      pinColor = '#DC2626';
+      letter = 'M';
+    } else if (isVtt) {
+      // Combined event with VTT
+      pinColor = '#16A34A';
+      letter = 'V';
+    } else if (isGravel) {
+      pinColor = '#EA580C';
+      letter = 'G';
+    } else if (isMarche) {
+      pinColor = '#DC2626';
+      letter = 'M';
+    } else {
+      pinColor = '#2563EB';
+      letter = 'R';
+    }
   }
 
   const pulseBorder = isSelected ? 'filter: drop-shadow(0 0 6px rgba(37,99,235,0.8)); transform: scale(1.15);' : '';
@@ -88,6 +132,7 @@ export const MapView: React.FC<MapViewProps> = ({
   selectedRandoId,
   onSelectRando,
   basemap,
+  activeFilter = 'ALL',
 }) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -204,7 +249,7 @@ export const MapView: React.FC<MapViewProps> = ({
     }).addTo(map);
   }, [basemap]);
 
-  // Update Markers and fit bounds whenever events change
+  // Update Markers and fit bounds whenever events or activeFilter changes
   useEffect(() => {
     const map = mapRef.current;
     const markersLayer = markersLayerRef.current;
@@ -229,7 +274,7 @@ export const MapView: React.FC<MapViewProps> = ({
       const isSelected = rando.id === selectedRandoId;
 
       const marker = L.marker([lat, lng], {
-        icon: createPinIcon(rando, isSelected),
+        icon: createPinIcon(rando, isSelected, activeFilter),
         riseOnHover: true,
       });
 
@@ -276,7 +321,7 @@ export const MapView: React.FC<MapViewProps> = ({
     }
 
     setTimeout(updateScale, 300);
-  }, [events, selectedDate]);
+  }, [events, selectedDate, activeFilter]);
 
   // When selected rando changes externally (e.g. from drawer/list), open its popup
   useEffect(() => {
