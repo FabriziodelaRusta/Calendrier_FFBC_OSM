@@ -39,20 +39,20 @@ function createPinIcon(rando: FFBCRando, isSelected: boolean): L.DivIcon {
   const isGravel = parcoursTypes.some(t => t.includes('GRAVEL')) || nameUpper.includes('GRAVEL');
   const isMarche = parcoursTypes.some(t => t.includes('MARCH') || t.includes('PEDESTRE')) || nameUpper.includes('MARCHE');
 
-  let pinColor = '#2563EB'; // Blue Route
+  let pinColor = '#2563EB'; // Route bleu
   let letter = 'R';
 
   if (isMarche && !isVtt && !isGravel) {
-    pinColor = '#E11D48'; // Rose Marche
+    pinColor = '#DC2626'; // Marche rouge
     letter = 'M';
   } else if (isVtt && isGravel) {
-    pinColor = '#7C3AED'; // Mixed
+    pinColor = '#7C3AED'; // Mixed violet
     letter = '★';
   } else if (isVtt) {
-    pinColor = '#059669'; // Green VTT
+    pinColor = '#16A34A'; // VTT vert
     letter = 'V';
   } else if (isGravel) {
-    pinColor = '#D97706'; // Amber Gravel
+    pinColor = '#EA580C'; // Gravel orange
     letter = 'G';
   }
 
@@ -147,8 +147,13 @@ export const MapView: React.FC<MapViewProps> = ({
     const map = L.map(mapContainerRef.current, {
       center: [50.5039, 4.4699],
       zoom: 8,
-      zoomControl: false, // will place zoom in bottomright explicitly
+      zoomControl: false,
+      attributionControl: false,
     });
+
+    if (map.attributionControl) {
+      map.removeControl(map.attributionControl);
+    }
 
     // Add zoom control at bottom right as requested
     L.control.zoom({ position: 'bottomright' }).addTo(map);

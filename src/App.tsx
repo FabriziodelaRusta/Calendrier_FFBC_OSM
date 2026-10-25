@@ -195,9 +195,9 @@ export default function App() {
         onSelectRando={handleSelectRando}
       />
 
-      {/* 7. Exact requested footer in bottom center (version 0.3) */}
+      {/* 7. Exact requested footer in bottom center (version 1.0) */}
       <div id="footer">
-        v<sub id="version">0.3</sub> — Fabrizio de la Rusta
+        v<sub id="version">1.0</sub> — Fabrizio de la Rusta
       </div>
     </div>
   );

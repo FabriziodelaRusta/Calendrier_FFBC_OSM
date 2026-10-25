@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Minimize2, Maximize2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Minimize2, Maximize2, Crosshair } from 'lucide-react';
 import { FFBCRando } from '../types';
 import { formatDateShortFrench } from '../utils/formatters';
 import { matchDiscipline } from '../utils/dataLoader';
@@ -19,7 +19,7 @@ interface DateDisciplines {
   hasMarche: boolean;
 }
 
-// Exactly 3 letters for month names as requested
+// Exactly 3 letters for month names
 const MONTH_NAMES_3 = [
   'Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jui',
   'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'
@@ -45,7 +45,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
   const viewYear = currentViewDate.getFullYear();
   const viewMonth = currentViewDate.getMonth();
 
-  // Map of date string -> disciplines summary (including Marche)
+  // Map of date string -> disciplines summary (Route, Gravel, VTT, Marche)
   const disciplinesByDate = useMemo(() => {
     const map = new Map<string, DateDisciplines>();
     for (const ev of allEvents) {
@@ -86,7 +86,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
     return count;
   }, [disciplinesByDate, viewYear, viewMonth]);
 
-  // Navigation handlers
+  // Navigation handlers for month
   const handlePrevMonth = () => {
     setCurrentViewDate(new Date(viewYear, viewMonth - 1, 1));
   };
@@ -95,10 +95,36 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
     setCurrentViewDate(new Date(viewYear, viewMonth + 1, 1));
   };
 
+  // Recenter to today
   const handleTodayClick = () => {
     onSelectDate(todayDate);
     const [y, m] = todayDate.split('-').map(Number);
     setCurrentViewDate(new Date(y, m - 1, 1));
+  };
+
+  // Day navigation with red < and > arrows
+  const handlePrevDay = () => {
+    const [y, m, d] = selectedDate.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    dt.setDate(dt.getDate() - 1);
+    const nextY = dt.getFullYear();
+    const nextM = String(dt.getMonth() + 1).padStart(2, '0');
+    const nextD = String(dt.getDate()).padStart(2, '0');
+    const nextStr = `${nextY}-${nextM}-${nextD}`;
+    onSelectDate(nextStr);
+    setCurrentViewDate(new Date(nextY, dt.getMonth(), 1));
+  };
+
+  const handleNextDay = () => {
+    const [y, m, d] = selectedDate.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    dt.setDate(dt.getDate() + 1);
+    const nextY = dt.getFullYear();
+    const nextM = String(dt.getMonth() + 1).padStart(2, '0');
+    const nextD = String(dt.getDate()).padStart(2, '0');
+    const nextStr = `${nextY}-${nextM}-${nextD}`;
+    onSelectDate(nextStr);
+    setCurrentViewDate(new Date(nextY, dt.getMonth(), 1));
   };
 
   // Generate calendar days
@@ -176,11 +202,11 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
       className="fixed top-2 right-2 sm:top-3 sm:right-3 z-[1005] select-none font-sans w-[48vw] sm:w-[280px]"
     >
       <div className="bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-slate-200/90 overflow-hidden w-full transition-all duration-200">
-        {/* Header Bar: Month name in 3 letters only */}
+        {/* Header Bar: Month name in 3 letters + Recenter crosshair icon */}
         <div className="bg-slate-900 text-white px-2 py-1.5 sm:px-3 sm:py-2 flex items-center justify-between">
           <div className="flex items-center gap-1 min-w-0">
             <CalendarIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-sky-400 shrink-0" />
-            <span className="font-semibold text-[11px] sm:text-xs truncate tracking-tight uppercase">
+            <span className="font-bold text-[11px] sm:text-xs truncate tracking-tight uppercase">
               {MONTH_NAMES_3[viewMonth]} {viewYear}
             </span>
             {eventsInViewMonth > 0 && (
@@ -190,13 +216,14 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
             )}
           </div>
 
-          <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
+            {/* Remplacer Aj par symbole recentrage */}
             <button
               onClick={handleTodayClick}
-              title="Aujourd'hui"
-              className="text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.2 rounded bg-slate-800 hover:bg-slate-700 text-sky-300 font-medium transition-colors cursor-pointer"
+              title="Recentrer sur aujourd'hui"
+              className="p-1 rounded-md bg-slate-800 hover:bg-slate-700 text-sky-300 hover:text-white transition-colors cursor-pointer flex items-center justify-center"
             >
-              Aj.
+              <Crosshair className="w-3.5 h-3.5" />
             </button>
 
             <button
@@ -227,23 +254,46 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
           </div>
         ) : (
           <div className="p-1.5 sm:p-2.5">
-            {/* Month Navigation */}
-            <div className="flex items-center justify-between mb-1">
+            {/* Month Navigation & Day selector with RED < and > */}
+            <div className="flex items-center justify-between mb-1 pb-1 border-b border-slate-100">
               <button
                 onClick={handlePrevMonth}
-                className="p-0.5 rounded hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+                className="p-0.5 rounded hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
                 title="Mois précédent"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
 
-              <div className="text-[10px] sm:text-xs font-semibold text-slate-700 truncate px-1">
-                Jour J
+              {/* Day J selector with RED < and > */}
+              <div className="flex items-center gap-1">
+                {/* Red < button for previous day */}
+                <button
+                  type="button"
+                  onClick={handlePrevDay}
+                  title="Jour précédent"
+                  className="w-5 h-5 flex items-center justify-center text-red-600 hover:text-red-700 hover:bg-red-50 rounded font-black text-xs transition-colors cursor-pointer"
+                >
+                  &lt;
+                </button>
+
+                <div className="text-[10px] sm:text-xs font-bold text-slate-800 truncate px-0.5">
+                  {formatDateShortFrench(selectedDate)}
+                </div>
+
+                {/* Red > button for next day */}
+                <button
+                  type="button"
+                  onClick={handleNextDay}
+                  title="Jour suivant"
+                  className="w-5 h-5 flex items-center justify-center text-red-600 hover:text-red-700 hover:bg-red-50 rounded font-black text-xs transition-colors cursor-pointer"
+                >
+                  &gt;
+                </button>
               </div>
 
               <button
                 onClick={handleNextMonth}
-                className="p-0.5 rounded hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+                className="p-0.5 rounded hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
                 title="Mois suivant"
               >
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -303,38 +353,30 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
                   >
                     <span>{cell.dayNum}</span>
 
-                    {/* Colored dots for route (blue), gravel (amber), vtt (green), marche (rose) */}
+                    {/* Identical colors: Route bleu (#2563EB), Gravel orange (#EA580C), VTT vert (#16A34A), Marche rouge (#DC2626) */}
                     {hasEvents && (
                       <div className="absolute bottom-0.5 flex items-center justify-center gap-[1.5px] max-w-full overflow-hidden px-0.5">
                         {cell.disciplines.hasRoute && (
                           <span
-                            className={`w-1 h-1 rounded-full ${
-                              isSelected ? 'bg-sky-200' : 'bg-blue-600'
-                            }`}
+                            className="w-1 h-1 rounded-full bg-[#2563EB]"
                             title="Route"
                           />
                         )}
                         {cell.disciplines.hasGravel && (
                           <span
-                            className={`w-1 h-1 rounded-full ${
-                              isSelected ? 'bg-amber-300' : 'bg-amber-500'
-                            }`}
+                            className="w-1 h-1 rounded-full bg-[#EA580C]"
                             title="Gravel"
                           />
                         )}
                         {cell.disciplines.hasVtt && (
                           <span
-                            className={`w-1 h-1 rounded-full ${
-                              isSelected ? 'bg-emerald-300' : 'bg-emerald-600'
-                            }`}
+                            className="w-1 h-1 rounded-full bg-[#16A34A]"
                             title="VTT"
                           />
                         )}
                         {cell.disciplines.hasMarche && (
                           <span
-                            className={`w-1 h-1 rounded-full ${
-                              isSelected ? 'bg-pink-300' : 'bg-rose-500'
-                            }`}
+                            className="w-1 h-1 rounded-full bg-[#DC2626]"
                             title="Marche"
                           />
                         )}
@@ -352,7 +394,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
                   {formatDateShortFrench(selectedDate)}
                 </div>
                 <div
-                  className={`font-bold px-1 py-0.2 rounded text-[9px] shrink-0 ${
+                  className={`font-bold px-1.5 py-0.2 rounded text-[9px] shrink-0 ${
                     selectedDisciplines.count > 0
                       ? 'bg-blue-100 text-blue-800'
                       : 'bg-slate-100 text-slate-500'
