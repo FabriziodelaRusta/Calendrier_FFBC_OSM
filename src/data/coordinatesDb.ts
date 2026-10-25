@@ -6,6 +6,8 @@ export interface LocationCoord {
   name?: string;
 }
 
+export type Coordinates = LocationCoord;
+
 // Curated high accuracy coordinates for specific event IDs
 export const EVENT_COORDINATES: Record<string, LocationCoord> = {
   // Weekly & classic sorties
@@ -157,6 +159,9 @@ export const POSTAL_CODE_COORDINATES: Record<string, LocationCoord> = {
   "7334": { lat: 50.4820, lng: 3.7638, name: "Hautrage" },
   "7540": { lat: 50.6231, lng: 3.4244, name: "Rumillies / Kain" },
   "7543": { lat: 50.6622, lng: 3.4278, name: "Mourcourt" },
+  "7608": { lat: 50.5333, lng: 3.5333, name: "Wiers" },
+  "7640": { lat: 50.5667, lng: 3.4500, name: "Antoing" },
+  "6724": { lat: 49.6833, lng: 5.5500, name: "Rulles (Habay)" },
   "7620": { lat: 50.5478, lng: 3.4286, name: "Hollain" },
   "7700": { lat: 50.7433, lng: 3.2189, name: "Mouscron" },
   "7730": { lat: 50.6583, lng: 3.3167, name: "Bailleul" },

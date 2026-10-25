@@ -6,7 +6,6 @@ on:
       - main
   workflow_dispatch:
 
-# Autorisations nécessaires pour GitHub Pages
 permissions:
   contents: read
   pages: write

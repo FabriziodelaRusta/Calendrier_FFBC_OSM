@@ -1,131 +1,190 @@
 import { FFBCRando } from '../types';
-import { EVENT_COORDINATES, POSTAL_CODE_COORDINATES, LocationCoord } from '../data/coordinatesDb';
+import { EVENT_COORDINATES, POSTAL_CODE_COORDINATES, Coordinates } from '../data/coordinatesDb';
+import bePostalCodesRaw from '../data/postalCodesBelgium.json';
 
-const GEOCODE_CACHE_KEY = 'ffbc_geocode_cache_v1';
+const bePostalCodes: Record<string, Coordinates> = bePostalCodesRaw as Record<string, Coordinates>;
 
-function getStoredCache(): Record<string, LocationCoord> {
-  try {
-    const raw = localStorage.getItem(GEOCODE_CACHE_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
-}
+// In-memory cache for dynamic geocoded queries
+const dynamicCache = new Map<string, Coordinates>();
 
-function saveToCache(key: string, coord: LocationCoord) {
-  try {
-    const cache = getStoredCache();
-    cache[key] = coord;
-    localStorage.setItem(GEOCODE_CACHE_KEY, JSON.stringify(cache));
-  } catch {
-    // Ignore storage quota
-  }
+/**
+ * Cleans address strings, especially handling double slashes "//", "/ /", or irregular separators
+ */
+export function cleanAddressString(raw: string): string {
+  if (!raw) return '';
+  return raw
+    .replace(/\/\s*\//g, ' ')
+    .replace(/\/+/g, ' ')
+    .replace(/["']/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /**
- * Extracts address query from lien_itineraire or falls back to adresse
+ * Extracts a searchable address or query from the FFBC rando record
  */
 export function extractAddressQuery(rando: FFBCRando): string {
-  let query = '';
   if (rando.lien_itineraire) {
     try {
       const url = new URL(rando.lien_itineraire);
-      query = url.searchParams.get('query') || '';
-    } catch {
-      const match = rando.lien_itineraire.match(/query=([^&]+)/);
-      if (match) {
-        query = decodeURIComponent(match[1]);
+      const queryParam = url.searchParams.get('query');
+      if (queryParam) {
+        return cleanAddressString(queryParam);
       }
+    } catch {
+      // Ignore URL parsing errors
     }
   }
 
-  if (!query || query.trim() === '' || query.includes('/ /')) {
-    query = rando.adresse || '';
-  }
+  const parts = [
+    cleanAddressString(rando.adresse || ''),
+    cleanAddressString(rando.localite || ''),
+    rando.code_postal ? String(rando.code_postal).trim() : '',
+  ].filter(Boolean);
 
-  query = query.replace(/\/ \//g, '').trim();
-
-  // If still empty or contains placeholder
-  if (!query && rando.code_postal) {
-    query = `${rando.code_postal} ${rando.localite || ''}`.trim();
-  }
-
-  return query;
+  return parts.join(' ').trim();
 }
 
 /**
- * Synchronous resolver using precomputed database & postal codes
+ * Synchronous resolver: uses complete Belgian postal codes database + event database
  */
-export function resolveCoordinatesSync(rando: FFBCRando): LocationCoord | null {
-  // 1. If explicit latitude & longitude in JSON
-  if (typeof rando.latitude === 'number' && typeof rando.longitude === 'number' && !isNaN(rando.latitude) && !isNaN(rando.longitude)) {
-    return {
-      lat: rando.latitude,
-      lng: rando.longitude,
-      name: rando.localite || rando.lieu_depart || undefined
-    };
-  }
-
-  // 2. Check curated event ID coordinates
+export function resolveCoordinatesSync(rando: FFBCRando): Coordinates | null {
+  // 1. Direct match by event ID
   if (EVENT_COORDINATES[rando.id]) {
     return EVENT_COORDINATES[rando.id];
   }
 
-  // 3. Check localStorage cache
-  const addressQuery = extractAddressQuery(rando);
-  const cache = getStoredCache();
-  if (addressQuery && cache[addressQuery]) {
-    return cache[addressQuery];
+  // 2. Direct match if already has valid numeric latitude and longitude
+  if (typeof rando.latitude === 'number' && typeof rando.longitude === 'number' && !isNaN(rando.latitude)) {
+    return {
+      lat: rando.latitude,
+      lng: rando.longitude,
+      name: `${rando.code_postal || ''} ${rando.localite || ''}`.trim() || rando.nom,
+    };
   }
 
-  // 4. Check postal code
-  if (rando.code_postal && POSTAL_CODE_COORDINATES[rando.code_postal]) {
-    return POSTAL_CODE_COORDINATES[rando.code_postal];
+  const addressQuery = cleanAddressString(extractAddressQuery(rando));
+
+  // 3. Extract postal code: first check code_postal, then search in addressQuery and localite
+  let cp: string | null = null;
+  if (rando.code_postal && /^\d{4,5}$/.test(String(rando.code_postal).trim())) {
+    cp = String(rando.code_postal).trim();
   }
 
-  // 5. Postal code from address string (4 or 5 digits)
-  const cpMatch = addressQuery.match(/\b(\d{4,5})\b/);
-  if (cpMatch && POSTAL_CODE_COORDINATES[cpMatch[1]]) {
-    return POSTAL_CODE_COORDINATES[cpMatch[1]];
+  if (!cp || cp === '1212' || cp === '0000') {
+    const cpMatch = addressQuery.match(/\b([1-9]\d{3,4})\b/);
+    if (cpMatch) {
+      cp = cpMatch[1];
+    }
   }
 
-  // 6. Check if address or locality contains Vaison
-  if (addressQuery.toLowerCase().includes('vaison')) {
-    return { lat: 44.2408, lng: 5.0747, name: 'Vaison-la-Romaine (France)' };
+  // 4. Check complete Belgian postal codes database
+  if (cp && bePostalCodes[cp]) {
+    return bePostalCodes[cp];
+  }
+
+  // 5. Check supplemental coordinates DB
+  if (cp && POSTAL_CODE_COORDINATES[cp]) {
+    return POSTAL_CODE_COORDINATES[cp];
+  }
+
+  // 6. Check dynamic cache
+  if (cp && dynamicCache.has(cp)) {
+    return dynamicCache.get(cp)!;
+  }
+
+  // 7. Check by locality name in Belgian database
+  if (rando.localite) {
+    const locClean = cleanAddressString(rando.localite).toUpperCase();
+    if (locClean.includes('VAISON')) {
+      return { lat: 44.2408, lng: 5.0747, name: 'Vaison-la-Romaine (France)' };
+    }
+    if (locClean.includes('CAVAILLON')) {
+      return { lat: 43.8378, lng: 5.0381, name: 'Cavaillon (France)' };
+    }
+    if (locClean.includes('ORCHIES')) {
+      return { lat: 50.4750, lng: 3.2430, name: 'Orchies (France)' };
+    }
+    if (locClean.includes('SEVILLE') || locClean.includes('SÉVILLE')) {
+      return { lat: 37.3891, lng: -5.9845, name: 'Séville (Espagne)' };
+    }
+    if (locClean.includes('MARRAKECH')) {
+      return { lat: 31.6295, lng: -7.9811, name: 'Marrakech (Maroc)' };
+    }
+  }
+
+  // 8. If special Diagonales/Traces without fix, fallback to center of Belgium
+  if (rando.nom && rando.nom.toLowerCase().includes('diagonale')) {
+    return { lat: 50.5039, lng: 4.4699, name: 'Belgique (Sur parcours)' };
   }
 
   return null;
 }
 
 /**
- * Async resolver with Photon fallback for dynamically added events
+ * Asynchronous resolver:
+ * "si toujours pas de position trouvee pour la carte utiliser le code postal seulement avec pays belgique et si toujours rien code postal avec pays france"
  */
-export async function resolveCoordinatesAsync(rando: FFBCRando): Promise<LocationCoord | null> {
-  const sync = resolveCoordinatesSync(rando);
-  if (sync) return sync;
+export async function resolveCoordinatesAsync(rando: FFBCRando): Promise<Coordinates | null> {
+  // 1. Try sync resolution first
+  const syncResult = resolveCoordinatesSync(rando);
+  if (syncResult) return syncResult;
 
-  const query = extractAddressQuery(rando);
-  if (!query) return null;
+  // 2. Extract postal code
+  let cp: string | null = null;
+  if (rando.code_postal && /^\d{4,5}$/.test(String(rando.code_postal).trim())) {
+    cp = String(rando.code_postal).trim();
+  }
+  if (!cp) {
+    const text = cleanAddressString(extractAddressQuery(rando));
+    const m = text.match(/\b([1-9]\d{3,4})\b/);
+    if (m) cp = m[1];
+  }
 
+  if (!cp) return null;
+
+  if (dynamicCache.has(cp)) {
+    return dynamicCache.get(cp)!;
+  }
+
+  // 3. Fallback: Query Nominatim with postal code only in Belgium
   try {
-    const cleanQ = query.replace(/^x\s+/i, '').replace(/^-\s+/i, '').trim();
-    const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(cleanQ)}&limit=1`;
-    const res = await fetch(url);
-    if (res.ok) {
-      const data = await res.json();
-      if (data.features && data.features.length > 0) {
-        const [lon, lat] = data.features[0].geometry.coordinates;
-        const coord: LocationCoord = {
-          lat,
-          lng: lon,
-          name: data.features[0].properties?.name || data.features[0].properties?.city || cleanQ
+    const urlBe = `https://nominatim.openstreetmap.org/search?postalcode=${encodeURIComponent(cp)}&country=belgium&format=json&limit=1`;
+    const resBe = await fetch(urlBe, { headers: { 'Accept': 'application/json' } });
+    if (resBe.ok) {
+      const dataBe = await resBe.json();
+      if (Array.isArray(dataBe) && dataBe.length > 0) {
+        const coord: Coordinates = {
+          lat: parseFloat(dataBe[0].lat),
+          lng: parseFloat(dataBe[0].lon),
+          name: `${cp} (Belgique)`,
         };
-        saveToCache(query, coord);
+        dynamicCache.set(cp, coord);
         return coord;
       }
     }
   } catch {
-    // Geocode fallback failed
+    // Continue to France fallback
+  }
+
+  // 4. Fallback: Query Nominatim with postal code only in France
+  try {
+    const urlFr = `https://nominatim.openstreetmap.org/search?postalcode=${encodeURIComponent(cp)}&country=france&format=json&limit=1`;
+    const resFr = await fetch(urlFr, { headers: { 'Accept': 'application/json' } });
+    if (resFr.ok) {
+      const dataFr = await resFr.json();
+      if (Array.isArray(dataFr) && dataFr.length > 0) {
+        const coord: Coordinates = {
+          lat: parseFloat(dataFr[0].lat),
+          lng: parseFloat(dataFr[0].lon),
+          name: `${cp} (France)`,
+        };
+        dynamicCache.set(cp, coord);
+        return coord;
+      }
+    }
+  } catch {
+    // Ignore error
   }
 
   return null;

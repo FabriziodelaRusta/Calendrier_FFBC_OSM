@@ -78,18 +78,15 @@ html, body, #root {
 
 /* Leaflet Zoom control position in bottomright */
 .leaflet-bottom.leaflet-right {
-  bottom: 38px !important;
+  bottom: 24px !important;
   right: 14px !important;
   z-index: 1000 !important;
 }
 
-@media (min-width: 640px) {
-  .leaflet-bottom.leaflet-right {
-    bottom: 28px !important;
-  }
-}
-
 .leaflet-control-zoom {
+  margin-right: 0 !important;
+  margin-bottom: 0 !important;
+  width: 36px !important;
   border-radius: 8px !important;
   overflow: hidden;
   border: 1px solid rgba(0,0,0,0.2) !important;
@@ -97,6 +94,9 @@ html, body, #root {
 }
 
 .leaflet-control-zoom a {
+  width: 36px !important;
+  height: 32px !important;
+  line-height: 32px !important;
   background-color: rgba(255,255,255,0.95) !important;
   color: #1e293b !important;
   font-weight: bold !important;

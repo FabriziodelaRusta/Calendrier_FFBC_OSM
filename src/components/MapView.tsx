@@ -37,13 +37,17 @@ function createPinIcon(rando: FFBCRando, isSelected: boolean): L.DivIcon {
 
   const isVtt = parcoursTypes.some(t => t.includes('VTT')) || nameUpper.includes('VTT');
   const isGravel = parcoursTypes.some(t => t.includes('GRAVEL')) || nameUpper.includes('GRAVEL');
+  const isMarche = parcoursTypes.some(t => t.includes('MARCH') || t.includes('PEDESTRE')) || nameUpper.includes('MARCHE');
 
   let pinColor = '#2563EB'; // Blue Route
   let letter = 'R';
 
-  if (isVtt && isGravel) {
-    pinColor = '#7C3AED'; // Mixed
+  if (isMarche && !isVtt && !isGravel) {
+    pinColor = '#E11D48'; // Rose Marche
     letter = 'M';
+  } else if (isVtt && isGravel) {
+    pinColor = '#7C3AED'; // Mixed
+    letter = '★';
   } else if (isVtt) {
     pinColor = '#059669'; // Green VTT
     letter = 'V';

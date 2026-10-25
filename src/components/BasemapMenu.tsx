@@ -38,13 +38,13 @@ export const BasemapMenu: React.FC<BasemapMenuProps> = ({
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="fixed bottom-[140px] sm:bottom-[126px] right-[14px] z-[1002] select-none font-sans">
+    <div className="fixed bottom-[98px] right-[14px] z-[1002] select-none font-sans">
       <div className="relative">
-        {/* Floating single icon button right above the zoom controls */}
+        {/* Floating single icon button right above the zoom controls, aligned on right edge */}
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/95 backdrop-blur-md shadow-lg border flex items-center justify-center transition-all cursor-pointer ${
+          className={`w-[36px] h-[36px] rounded-lg bg-white/95 backdrop-blur-md shadow-lg border flex items-center justify-center transition-all cursor-pointer ${
             isOpen
               ? 'border-blue-500 text-blue-600 ring-2 ring-blue-400'
               : 'border-slate-200/90 text-slate-700 hover:text-blue-600 hover:bg-slate-50'

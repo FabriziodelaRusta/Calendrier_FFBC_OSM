@@ -75,11 +75,13 @@ export default function App() {
     let route = 0;
     let gravel = 0;
     let vtt = 0;
+    let marche = 0;
 
     for (const ev of dayEvents) {
       if (matchDiscipline(ev, 'ROUTE')) route++;
       if (matchDiscipline(ev, 'GRAVEL')) gravel++;
       if (matchDiscipline(ev, 'VTT')) vtt++;
+      if (matchDiscipline(ev, 'MARCHE')) marche++;
     }
 
     return {
@@ -87,6 +89,7 @@ export default function App() {
       route,
       gravel,
       vtt,
+      marche,
     };
   }, [dayEvents]);
 
@@ -129,6 +132,13 @@ export default function App() {
     setSelectedProvince('ALL');
   };
 
+  // User requirement: un clic sur le calendrier fait un reset des filtres
+  const handleSelectDate = (date: string) => {
+    setSelectedDate(date);
+    setDisciplineFilter('ALL');
+    setSelectedProvince('ALL');
+  };
+
   return (
     <div className="relative w-screen h-screen overflow-hidden select-none">
       {/* 1. Top Left: Header with RPA Club logo and title (max half screen on mobile) */}
@@ -143,7 +153,7 @@ export default function App() {
       {/* 2. Top Right: Monthly calendar widget (max half screen on mobile) */}
       <CalendarWidget
         selectedDate={selectedDate}
-        onSelectDate={setSelectedDate}
+        onSelectDate={handleSelectDate}
         allEvents={allEvents}
         todayDate={todayDateStr}
       />
@@ -185,9 +195,9 @@ export default function App() {
         onSelectRando={handleSelectRando}
       />
 
-      {/* 7. Exact requested footer in bottom center */}
+      {/* 7. Exact requested footer in bottom center (version 0.3) */}
       <div id="footer">
-        v<sub id="version">0.2</sub> — Fabrizio de la Rusta
+        v<sub id="version">0.3</sub> — Fabrizio de la Rusta
       </div>
     </div>
   );

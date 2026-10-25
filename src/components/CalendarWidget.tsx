@@ -16,11 +16,13 @@ interface DateDisciplines {
   hasRoute: boolean;
   hasGravel: boolean;
   hasVtt: boolean;
+  hasMarche: boolean;
 }
 
-const MONTH_NAMES = [
-  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+// Exactly 3 letters for month names as requested
+const MONTH_NAMES_3 = [
+  'Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jui',
+  'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'
 ];
 
 const WEEKDAY_NAMES = ['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'];
@@ -43,7 +45,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
   const viewYear = currentViewDate.getFullYear();
   const viewMonth = currentViewDate.getMonth();
 
-  // Map of date string -> disciplines summary
+  // Map of date string -> disciplines summary (including Marche)
   const disciplinesByDate = useMemo(() => {
     const map = new Map<string, DateDisciplines>();
     for (const ev of allEvents) {
@@ -53,11 +55,13 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
           hasRoute: false,
           hasGravel: false,
           hasVtt: false,
+          hasMarche: false,
         };
         current.count += 1;
         if (matchDiscipline(ev, 'ROUTE')) current.hasRoute = true;
         if (matchDiscipline(ev, 'GRAVEL')) current.hasGravel = true;
         if (matchDiscipline(ev, 'VTT')) current.hasVtt = true;
+        if (matchDiscipline(ev, 'MARCHE')) current.hasMarche = true;
         map.set(ev.date, current);
       }
     }
@@ -113,7 +117,13 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
       disciplines: DateDisciplines;
     }> = [];
 
-    const emptyDisciplines: DateDisciplines = { count: 0, hasRoute: false, hasGravel: false, hasVtt: false };
+    const emptyDisciplines: DateDisciplines = {
+      count: 0,
+      hasRoute: false,
+      hasGravel: false,
+      hasVtt: false,
+      hasMarche: false,
+    };
 
     const prevMonthLastDay = new Date(viewYear, viewMonth, 0).getDate();
     for (let i = startDayOfWeek - 1; i >= 0; i--) {
@@ -153,19 +163,25 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
     return cells;
   }, [viewYear, viewMonth, disciplinesByDate]);
 
-  const selectedDisciplines = disciplinesByDate.get(selectedDate) || { count: 0, hasRoute: false, hasGravel: false, hasVtt: false };
+  const selectedDisciplines = disciplinesByDate.get(selectedDate) || {
+    count: 0,
+    hasRoute: false,
+    hasGravel: false,
+    hasVtt: false,
+    hasMarche: false,
+  };
 
   return (
     <div
       className="fixed top-2 right-2 sm:top-3 sm:right-3 z-[1005] select-none font-sans w-[48vw] sm:w-[280px]"
     >
       <div className="bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-slate-200/90 overflow-hidden w-full transition-all duration-200">
-        {/* Header Bar */}
+        {/* Header Bar: Month name in 3 letters only */}
         <div className="bg-slate-900 text-white px-2 py-1.5 sm:px-3 sm:py-2 flex items-center justify-between">
           <div className="flex items-center gap-1 min-w-0">
             <CalendarIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-sky-400 shrink-0" />
-            <span className="font-semibold text-[11px] sm:text-xs truncate tracking-tight">
-              {MONTH_NAMES[viewMonth].slice(0, 4)}. {viewYear}
+            <span className="font-semibold text-[11px] sm:text-xs truncate tracking-tight uppercase">
+              {MONTH_NAMES_3[viewMonth]} {viewYear}
             </span>
             {eventsInViewMonth > 0 && (
               <span className="text-[10px] text-slate-300 font-bold shrink-0">
@@ -287,7 +303,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
                   >
                     <span>{cell.dayNum}</span>
 
-                    {/* Colored dots for route (blue), gravel (amber), vtt (green) */}
+                    {/* Colored dots for route (blue), gravel (amber), vtt (green), marche (rose) */}
                     {hasEvents && (
                       <div className="absolute bottom-0.5 flex items-center justify-center gap-[1.5px] max-w-full overflow-hidden px-0.5">
                         {cell.disciplines.hasRoute && (
@@ -312,6 +328,14 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
                               isSelected ? 'bg-emerald-300' : 'bg-emerald-600'
                             }`}
                             title="VTT"
+                          />
+                        )}
+                        {cell.disciplines.hasMarche && (
+                          <span
+                            className={`w-1 h-1 rounded-full ${
+                              isSelected ? 'bg-pink-300' : 'bg-rose-500'
+                            }`}
+                            title="Marche"
                           />
                         )}
                       </div>

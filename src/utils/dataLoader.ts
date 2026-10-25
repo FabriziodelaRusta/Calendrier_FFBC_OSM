@@ -21,6 +21,11 @@ export function matchDiscipline(rando: FFBCRando, filter: DisciplineFilter): boo
   const remarkUpper = (rando.remarque || '').toUpperCase();
   const locUpper = (rando.localite || '').toUpperCase();
 
+  const isMarche = parcoursTypes.some(t => t.includes('MARCH') || t.includes('PEDESTRE') || t.includes('WALK')) ||
+    nameUpper.includes('MARCHE') ||
+    remarkUpper.includes('MARCHE') ||
+    locUpper.includes('MARCHE');
+
   const isVtt = parcoursTypes.some(t => t.includes('VTT')) ||
     nameUpper.includes('VTT') ||
     remarkUpper.includes('VTT') ||
@@ -34,8 +39,9 @@ export function matchDiscipline(rando: FFBCRando, filter: DisciplineFilter): boo
   const isRoute = parcoursTypes.some(t =>
     t.includes('ROUTE') || t.includes('CYCLO') || t.includes('EASY') ||
     t.includes('DIAGONALE') || t.includes('ETOILE') || t.includes('BAD')
-  ) || (!isVtt && !isGravel) || nameUpper.includes('CYCLO') || nameUpper.includes('ROUTE');
+  ) || (!isVtt && !isGravel && !isMarche) || nameUpper.includes('CYCLO') || nameUpper.includes('ROUTE');
 
+  if (filter === 'MARCHE') return isMarche;
   if (filter === 'VTT') return isVtt;
   if (filter === 'GRAVEL') return isGravel;
   if (filter === 'ROUTE') return isRoute;
@@ -43,11 +49,12 @@ export function matchDiscipline(rando: FFBCRando, filter: DisciplineFilter): boo
   return true;
 }
 
-export function getDisciplineBadges(rando: FFBCRando): { isRoute: boolean; isGravel: boolean; isVtt: boolean } {
+export function getDisciplineBadges(rando: FFBCRando): { isRoute: boolean; isGravel: boolean; isVtt: boolean; isMarche: boolean } {
   return {
     isRoute: matchDiscipline(rando, 'ROUTE'),
     isGravel: matchDiscipline(rando, 'GRAVEL'),
     isVtt: matchDiscipline(rando, 'VTT'),
+    isMarche: matchDiscipline(rando, 'MARCHE'),
   };
 }
 
