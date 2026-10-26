@@ -81,12 +81,19 @@ export async function fetchFFBCData(): Promise<CalendarDataset> {
     : (rawData.randonnées || rawData.randonnees || rawData.data || []);
 
   const items: FFBCRando[] = rawList.map((item: any) => {
+    const isFrance =
+      (item.localite && String(item.localite).toUpperCase().includes('FRANCE')) ||
+      (item.adresse && String(item.adresse).toUpperCase().includes('FRANCE')) ||
+      (item.texte_calendrier && String(item.texte_calendrier).toUpperCase().includes('FRANCE')) ||
+      (item.localite && (String(item.localite).toUpperCase().includes('ORCHIES') || String(item.localite).toUpperCase().includes('VAISON') || String(item.localite).toUpperCase().includes('CAVAILLON'))) ||
+      String(item.id) === '8980' || String(item.id) === '9664' || String(item.id) === '9649' || String(item.id) === '9908';
+
     const rando: FFBCRando = {
       ...item,
       id: String(item.id || Math.random().toString(36).substring(7)),
       nom: item.nom || 'Randonnée FFBC',
       date: item.date || '2026-10-24',
-      province: item.province && String(item.province).trim() !== '' ? String(item.province).trim() : 'Inconnu',
+      province: isFrance ? 'France' : (item.province && String(item.province).trim() !== '' ? String(item.province).trim() : 'Inconnu'),
       code_postal: item.code_postal ? String(item.code_postal).trim() : null,
       localite: item.localite ? String(item.localite).trim() : null,
       lieu_depart: item.lieu_depart || null,

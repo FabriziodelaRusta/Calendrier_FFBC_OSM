@@ -83,7 +83,7 @@ export function generatePopupContent(rando: FFBCRando): string {
       <!-- Header -->
       <div style="border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 8px;">
         <div style="font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">
-          ${escapeHtml(rando.province || 'Belgique')} · ID ${escapeHtml(rando.id)}
+          ${escapeHtml(rando.province === 'France' || (rando.localite && rando.localite.toUpperCase().includes('FRANCE')) || (rando.adresse && rando.adresse.toUpperCase().includes('FRANCE')) || rando.id === '8980' || rando.id === '9664' || rando.id === '9649' || rando.id === '9908' ? 'France' : (rando.province || 'Belgique'))} · ID ${escapeHtml(rando.id)}
         </div>
         <h3 style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 4px 0 6px 0; line-height: 1.25;">
           ${escapeHtml(rando.nom)}

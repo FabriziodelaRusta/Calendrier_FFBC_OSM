@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import { FFBCRando, BasemapType, DisciplineFilter } from '../types';
 import { generatePopupContent, generateTooltipContent } from '../utils/popupGenerator';
+import { matchDiscipline } from '../utils/dataLoader';
 
 interface MapViewProps {
   events: FFBCRando[];
@@ -30,99 +31,64 @@ const BASEMAP_TILES: Record<BasemapType, { url: string; attribution: string; max
   },
 };
 
-// Compact pin icon with 100% synchronized colors:
-// Route: #2563EB (Bleu)
-// Gravel: #EA580C (Orange)
-// VTT: #16A34A (Vert)
-// Marche: #DC2626 (Rouge)
-function createPinIcon(
-  rando: FFBCRando,
-  isSelected: boolean,
-  activeFilter: DisciplineFilter = 'ALL'
+interface SinglePinInfo {
+  color: string;
+  letter: string;
+  type: DisciplineFilter;
+  rando: FFBCRando;
+}
+
+// Generate stacked pins for multi-discipline randos or co-located events
+function createLocationPinIcon(
+  pins: SinglePinInfo[],
+  isSelected: boolean
 ): L.DivIcon {
-  const parcoursTypes = (rando.parcours || []).map(p => (p.type || '').toUpperCase());
-  const nameUpper = (rando.nom || '').toUpperCase();
+  const pinCount = pins.length;
+  const offsetX = 7; // Horizontal fan shift per stacked pin
+  const offsetY = 4; // Vertical fan shift per stacked pin
+  const baseWidth = 22;
+  const baseHeight = 28;
+  const totalWidth = baseWidth + (pinCount - 1) * offsetX;
+  const totalHeight = baseHeight + (pinCount - 1) * offsetY;
 
-  const isVtt = parcoursTypes.some(t => t.includes('VTT')) || nameUpper.includes('VTT') || nameUpper.includes('BIKER');
-  const isGravel = parcoursTypes.some(t => t.includes('GRAVEL')) || nameUpper.includes('GRAVEL');
-  const isMarche = parcoursTypes.some(t => t.includes('MARCH') || t.includes('PEDESTRE')) || nameUpper.includes('MARCHE');
-  const isRoute = parcoursTypes.some(t => t.includes('ROUTE') || t.includes('CYCLO')) || nameUpper.includes('CYCLO') || nameUpper.includes('ROUTE');
+  const pulseStyle = isSelected
+    ? 'filter: drop-shadow(0 0 7px rgba(37,99,235,0.9)); transform: scale(1.15);'
+    : 'filter: drop-shadow(0 2px 4px rgba(0,0,0,0.35));';
 
-  let pinColor = '#2563EB'; // Bleu Route default
-  let letter = 'R';
+  let pinSvgs = '';
+  pins.forEach((p, idx) => {
+    const left = idx * offsetX;
+    const bottom = (pinCount - 1 - idx) * offsetY;
+    const z = 10 + idx;
 
-  // If a specific filter is currently active, align pin with that filter
-  if (activeFilter === 'VTT' && isVtt) {
-    pinColor = '#16A34A';
-    letter = 'V';
-  } else if (activeFilter === 'GRAVEL' && isGravel) {
-    pinColor = '#EA580C';
-    letter = 'G';
-  } else if (activeFilter === 'MARCHE' && isMarche) {
-    pinColor = '#DC2626';
-    letter = 'M';
-  } else if (activeFilter === 'ROUTE') {
-    pinColor = '#2563EB';
-    letter = 'R';
-  } else {
-    // When activeFilter is 'ALL', choose strictly among the 4 canonical colors
-    if (nameUpper.includes('VTT') || nameUpper.includes('BIKER')) {
-      pinColor = '#16A34A';
-      letter = 'V';
-    } else if (nameUpper.includes('GRAVEL')) {
-      pinColor = '#EA580C';
-      letter = 'G';
-    } else if (nameUpper.includes('MARCHE')) {
-      pinColor = '#DC2626';
-      letter = 'M';
-    } else if (isVtt && !isRoute && !isGravel) {
-      pinColor = '#16A34A';
-      letter = 'V';
-    } else if (isGravel && !isRoute && !isVtt) {
-      pinColor = '#EA580C';
-      letter = 'G';
-    } else if (isMarche && !isRoute && !isVtt && !isGravel) {
-      pinColor = '#DC2626';
-      letter = 'M';
-    } else if (isVtt) {
-      // Combined event with VTT
-      pinColor = '#16A34A';
-      letter = 'V';
-    } else if (isGravel) {
-      pinColor = '#EA580C';
-      letter = 'G';
-    } else if (isMarche) {
-      pinColor = '#DC2626';
-      letter = 'M';
-    } else {
-      pinColor = '#2563EB';
-      letter = 'R';
-    }
-  }
-
-  const pulseBorder = isSelected ? 'filter: drop-shadow(0 0 6px rgba(37,99,235,0.8)); transform: scale(1.15);' : '';
+    pinSvgs += `
+      <div style="position: absolute; left: ${left}px; bottom: ${bottom}px; width: 22px; height: 28px; z-index: ${z}; transition: transform 0.15s ease;">
+        <svg viewBox="0 0 22 28" width="22" height="28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M11 0C4.925 0 0 4.925 0 11C0 18.5 9.5 26.8 10.4 27.7C10.7 28 11.3 28 11.6 27.7C12.5 26.8 22 18.5 22 11C22 4.925 17.075 0 11 0Z" fill="${p.color}"/>
+          <path d="M11 1.5C5.753 1.5 1.5 5.753 1.5 11C1.5 17.5 10 24.8 11 25.8C12 24.8 20.5 17.5 20.5 11C20.5 5.753 16.247 1.5 11 1.5Z" stroke="#ffffff" stroke-width="1.3"/>
+          <circle cx="11" cy="10" r="5.8" fill="#ffffff"/>
+        </svg>
+        <div style="position: absolute; top: 4px; left: 0; right: 0; display: flex; align-items: center; justify-content: center;">
+          <span style="font-size: 9px; font-weight: 900; color: ${p.color}; line-height: 1; user-select: none; font-family: system-ui, sans-serif;">
+            ${p.letter}
+          </span>
+        </div>
+      </div>
+    `;
+  });
 
   const html = `
-    <div style="position: relative; width: 22px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.32)); transition: transform 0.15s ease; ${pulseBorder}">
-      <svg viewBox="0 0 22 28" width="22" height="28" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M11 0C4.925 0 0 4.925 0 11C0 18.5 9.5 26.8 10.4 27.7C10.7 28 11.3 28 11.6 27.7C12.5 26.8 22 18.5 22 11C22 4.925 17.075 0 11 0Z" fill="${pinColor}"/>
-        <path d="M11 1.5C5.753 1.5 1.5 5.753 1.5 11C1.5 17.5 10 24.8 11 25.8C12 24.8 20.5 17.5 20.5 11C20.5 5.753 16.247 1.5 11 1.5Z" stroke="#ffffff" stroke-width="1.2" stroke-opacity="0.8"/>
-        <circle cx="11" cy="10" r="6" fill="#ffffff"/>
-      </svg>
-      <div style="position: absolute; top: 4px; left: 0; right: 0; display: flex; align-items: center; justify-content: center;">
-        <span style="font-size: 9px; font-weight: 900; color: ${pinColor}; line-height: 1; user-select: none; font-family: system-ui, sans-serif;">
-          ${letter}
-        </span>
-      </div>
+    <div style="position: relative; width: ${totalWidth}px; height: ${totalHeight}px; cursor: pointer; ${pulseStyle}">
+      ${pinSvgs}
     </div>
   `;
 
   return L.divIcon({
     html,
-    className: 'ffbc-marker-icon-small',
-    iconSize: [22, 28],
-    iconAnchor: [11, 28],
-    popupAnchor: [0, -26],
+    className: 'ffbc-stacked-marker-icon',
+    iconSize: [totalWidth, totalHeight],
+    iconAnchor: [11, totalHeight],
+    popupAnchor: [Math.round(totalWidth / 2) - 11, -totalHeight + 2],
   });
 }
 
@@ -266,39 +232,93 @@ export const MapView: React.FC<MapViewProps> = ({
       return;
     }
 
-    const latLngs: L.LatLng[] = [];
+    // Group events by location key (same GPS coordinates within ~10 meters)
+    const locationGroups = new Map<string, { lat: number; lng: number; randos: FFBCRando[] }>();
 
     validEvents.forEach((rando) => {
       const lat = rando.computedLat!;
       const lng = rando.computedLng!;
-      const isSelected = rando.id === selectedRandoId;
+      const key = `${lat.toFixed(4)}_${lng.toFixed(4)}`;
+      const existing = locationGroups.get(key) || { lat, lng, randos: [] };
+      existing.randos.push(rando);
+      locationGroups.set(key, existing);
+    });
+
+    const latLngs: L.LatLng[] = [];
+
+    // For each location, assemble all discipline pins to stack
+    locationGroups.forEach(({ lat, lng, randos }) => {
+      const pins: SinglePinInfo[] = [];
+
+      randos.forEach((rando) => {
+        // Collect disciplines
+        const hasRoute = matchDiscipline(rando, 'ROUTE');
+        const hasGravel = matchDiscipline(rando, 'GRAVEL');
+        const hasVtt = matchDiscipline(rando, 'VTT');
+        const hasMarche = matchDiscipline(rando, 'MARCHE');
+
+        if (activeFilter === 'ROUTE' && hasRoute) {
+          pins.push({ color: '#2563EB', letter: 'R', type: 'ROUTE', rando });
+        } else if (activeFilter === 'GRAVEL' && hasGravel) {
+          pins.push({ color: '#EA580C', letter: 'G', type: 'GRAVEL', rando });
+        } else if (activeFilter === 'VTT' && hasVtt) {
+          pins.push({ color: '#16A34A', letter: 'V', type: 'VTT', rando });
+        } else if (activeFilter === 'MARCHE' && hasMarche) {
+          pins.push({ color: '#DC2626', letter: 'M', type: 'MARCHE', rando });
+        } else if (activeFilter === 'ALL') {
+          // Stack all disciplines present in this rando
+          if (hasRoute) pins.push({ color: '#2563EB', letter: 'R', type: 'ROUTE', rando });
+          if (hasGravel) pins.push({ color: '#EA580C', letter: 'G', type: 'GRAVEL', rando });
+          if (hasVtt) pins.push({ color: '#16A34A', letter: 'V', type: 'VTT', rando });
+          if (hasMarche) pins.push({ color: '#DC2626', letter: 'M', type: 'MARCHE', rando });
+        }
+      });
+
+      if (pins.length === 0) return;
+
+      const isSelected = randos.some(r => r.id === selectedRandoId);
 
       const marker = L.marker([lat, lng], {
-        icon: createPinIcon(rando, isSelected, activeFilter),
+        icon: createLocationPinIcon(pins, isSelected),
         riseOnHover: true,
       });
 
       // Tooltip on hover
-      marker.bindTooltip(generateTooltipContent(rando), {
+      const tooltipContent = randos.map(r => generateTooltipContent(r)).join('<br/><div class="my-1 border-t border-slate-700"></div>');
+      marker.bindTooltip(tooltipContent, {
         direction: 'top',
-        offset: [0, -24],
+        offset: [0, -26],
         opacity: 0.95,
         className: 'ffbc-leaflet-tooltip',
       });
 
-      // Rich organized popup on click
-      marker.bindPopup(generatePopupContent(rando), {
+      // Rich popup on click
+      const popupHtml = randos.length === 1
+        ? generatePopupContent(randos[0])
+        : `
+          <div class="max-h-[80vh] overflow-y-auto space-y-3 pr-1">
+            <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+              ${randos.length} randonnées au même lieu :
+            </div>
+            ${randos.map(r => generatePopupContent(r)).join('<div class="my-2 border-t border-slate-200"></div>')}
+          </div>
+        `;
+
+      marker.bindPopup(popupHtml, {
         maxWidth: 360,
         className: 'ffbc-leaflet-popup',
         autoPanPadding: [50, 50],
       });
 
       marker.on('click', () => {
-        onSelectRando?.(rando);
+        onSelectRando?.(randos[0]);
       });
 
       markersLayer.addLayer(marker);
-      markersByIdRef.current.set(rando.id, marker);
+      randos.forEach(r => {
+        markersByIdRef.current.set(r.id, marker);
+      });
+
       latLngs.push(L.latLng(lat, lng));
     });
 
