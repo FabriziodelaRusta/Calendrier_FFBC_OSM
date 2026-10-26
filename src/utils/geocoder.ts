@@ -46,15 +46,12 @@ export function extractAddressQuery(rando: FFBCRando): string {
 }
 
 /**
- * Synchronous resolver: uses complete Belgian postal codes database + event database
+ * Synchronous resolver:
+ * Prioritizes actual postal codes and real address texts (1,190 Belgian postal codes DB)
+ * before falling back to manual event IDs.
  */
 export function resolveCoordinatesSync(rando: FFBCRando): Coordinates | null {
-  // 1. Direct match by event ID
-  if (EVENT_COORDINATES[rando.id]) {
-    return EVENT_COORDINATES[rando.id];
-  }
-
-  // 2. Direct match if already has valid numeric latitude and longitude
+  // 1. Direct match if already has valid numeric latitude and longitude
   if (typeof rando.latitude === 'number' && typeof rando.longitude === 'number' && !isNaN(rando.latitude)) {
     return {
       lat: rando.latitude,
@@ -64,37 +61,9 @@ export function resolveCoordinatesSync(rando: FFBCRando): Coordinates | null {
   }
 
   const addressQuery = cleanAddressString(extractAddressQuery(rando));
-
-  // 3. Extract postal code: first check code_postal, then search in addressQuery and localite
-  let cp: string | null = null;
-  if (rando.code_postal && /^\d{4,5}$/.test(String(rando.code_postal).trim())) {
-    cp = String(rando.code_postal).trim();
-  }
-
-  if (!cp || cp === '1212' || cp === '0000') {
-    const cpMatch = addressQuery.match(/\b([1-9]\d{3,4})\b/);
-    if (cpMatch) {
-      cp = cpMatch[1];
-    }
-  }
-
-  // 4. Check complete Belgian postal codes database
-  if (cp && bePostalCodes[cp]) {
-    return bePostalCodes[cp];
-  }
-
-  // 5. Check supplemental coordinates DB
-  if (cp && POSTAL_CODE_COORDINATES[cp]) {
-    return POSTAL_CODE_COORDINATES[cp];
-  }
-
-  // 6. Check dynamic cache
-  if (cp && dynamicCache.has(cp)) {
-    return dynamicCache.get(cp)!;
-  }
-
-  // 7. Check by locality name or full address text
   const fullText = (addressQuery + ' ' + (rando.localite || '') + ' ' + (rando.nom || '')).toUpperCase();
+
+  // 2. Specific France / foreign cities detection by explicit keywords
   if (fullText.includes('VAISON') || fullText.includes('84110')) {
     return { lat: 44.2408, lng: 5.0747, name: 'Vaison-la-Romaine (France)' };
   }
@@ -111,6 +80,39 @@ export function resolveCoordinatesSync(rando: FFBCRando): Coordinates | null {
     return { lat: 31.6295, lng: -7.9811, name: 'Marrakech (Maroc)' };
   }
 
+  // 3. Extract postal code: first check code_postal, then search in addressQuery and localite
+  let cp: string | null = null;
+  if (rando.code_postal && /^\d{4,5}$/.test(String(rando.code_postal).trim())) {
+    cp = String(rando.code_postal).trim();
+  }
+
+  if (!cp || cp === '1212' || cp === '0000') {
+    const cpMatch = addressQuery.match(/\b([1-9]\d{3,4})\b/);
+    if (cpMatch) {
+      cp = cpMatch[1];
+    }
+  }
+
+  // 4. Check complete Belgian postal codes database (1,190 codes!)
+  if (cp && bePostalCodes[cp]) {
+    return bePostalCodes[cp];
+  }
+
+  // 5. Check supplemental coordinates DB
+  if (cp && POSTAL_CODE_COORDINATES[cp]) {
+    return POSTAL_CODE_COORDINATES[cp];
+  }
+
+  // 6. Check manual event ID fallback only for items without valid postal code
+  if (EVENT_COORDINATES[rando.id]) {
+    return EVENT_COORDINATES[rando.id];
+  }
+
+  // 7. Check dynamic cache
+  if (cp && dynamicCache.has(cp)) {
+    return dynamicCache.get(cp)!;
+  }
+
   // 8. If special Diagonales/Traces without fix, fallback to center of Belgium
   if (rando.nom && rando.nom.toLowerCase().includes('diagonale')) {
     return { lat: 50.5039, lng: 4.4699, name: 'Belgique (Sur parcours)' };
@@ -124,11 +126,9 @@ export function resolveCoordinatesSync(rando: FFBCRando): Coordinates | null {
  * "si toujours pas de position trouvee pour la carte utiliser le code postal seulement avec pays belgique et si toujours rien code postal avec pays france"
  */
 export async function resolveCoordinatesAsync(rando: FFBCRando): Promise<Coordinates | null> {
-  // 1. Try sync resolution first
   const syncResult = resolveCoordinatesSync(rando);
   if (syncResult) return syncResult;
 
-  // 2. Extract postal code
   let cp: string | null = null;
   if (rando.code_postal && /^\d{4,5}$/.test(String(rando.code_postal).trim())) {
     cp = String(rando.code_postal).trim();
@@ -145,7 +145,7 @@ export async function resolveCoordinatesAsync(rando: FFBCRando): Promise<Coordin
     return dynamicCache.get(cp)!;
   }
 
-  // 3. Fallback: Query Nominatim with postal code only in Belgium
+  // Fallback: Query Nominatim with postal code only in Belgium
   try {
     const urlBe = `https://nominatim.openstreetmap.org/search?postalcode=${encodeURIComponent(cp)}&country=belgium&format=json&limit=1`;
     const resBe = await fetch(urlBe, { headers: { 'Accept': 'application/json' } });
@@ -165,7 +165,7 @@ export async function resolveCoordinatesAsync(rando: FFBCRando): Promise<Coordin
     // Continue to France fallback
   }
 
-  // 4. Fallback: Query Nominatim with postal code only in France
+  // Fallback: Query Nominatim with postal code only in France
   try {
     const urlFr = `https://nominatim.openstreetmap.org/search?postalcode=${encodeURIComponent(cp)}&country=france&format=json&limit=1`;
     const resFr = await fetch(urlFr, { headers: { 'Accept': 'application/json' } });
