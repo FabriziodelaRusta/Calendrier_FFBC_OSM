@@ -38,9 +38,9 @@ export const BasemapMenu: React.FC<BasemapMenuProps> = ({
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="fixed bottom-[108px] sm:bottom-[123px] right-[14px] z-[1002] select-none font-sans">
+    <div className="fixed bottom-[22px] sm:bottom-[24px] right-[14px] z-[1002] select-none font-sans">
       <div className="relative">
-        {/* Floating single icon button right above the zoom controls, aligned on right edge */}
+        {/* Floating single icon button at bottom right, aligned on right edge with zoom buttons above it */}
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
@@ -54,9 +54,9 @@ export const BasemapMenu: React.FC<BasemapMenuProps> = ({
           <Layers className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
 
-        {/* Dropdown menu appearing above/beside the button */}
+        {/* Dropdown menu appearing to the left of the button */}
         {isOpen && (
-          <div className="absolute bottom-11 right-0 bg-white/98 backdrop-blur-md rounded-xl shadow-2xl border border-slate-200/90 p-2 w-44 flex flex-col gap-1 z-50">
+          <div className="absolute bottom-0 right-11 bg-white/98 backdrop-blur-md rounded-xl shadow-2xl border border-slate-200/90 p-2 w-44 flex flex-col gap-1 z-50">
             <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-2 py-0.5">
               Fonds de carte
             </div>
